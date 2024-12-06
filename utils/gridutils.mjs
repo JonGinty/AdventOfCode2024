@@ -1,15 +1,15 @@
-export function toGrid(inputLines: string) {}
+export function toGrid(inputLines) {}
 
-export type coord = [number, number];
-export type gridItem<T> = [number, number, T];
-export type range = { minX: number; minY: number; maxX: number; maxY: number };
+// export type coord = [number, number];
+// export type gridItem<T> = [number, number, T];
+// export type range = { minX: number; minY: number; maxX: number; maxY: number };
 
-export class Grid<T> {
+export class Grid {
   // this can be more performant to use an object than a sparse array
-  private items: Record<string, Record<string, T>> = {};
-  private range: RangeTracker = new RangeTracker();
+  items = {};
+  range = new RangeTracker();
 
-  public set(x: number, y: number, value: T): void {
+  set(x, y, value) {
     this.range.log(x, y);
     const { xKey, yKey } = keyStrings(x, y);
     if (!this.items[xKey]) {
@@ -18,27 +18,28 @@ export class Grid<T> {
     this.items[xKey][yKey] = value;
   }
 
-  public get(x: number, y: number): T | null {
+  get(x, y) {
     const { xKey, yKey } = keyStrings(x, y);
     const xRow = this.items[xKey];
     if (!xRow) return null;
-    if (!Object.hasOwn(xRow, yKey)) return null;
+    //if (!Object.hasOwn(xRow, yKey)) return null;
+    if (!xRow || !Object.keys(xRow).some(key => key === yKey)) return null;
     return xRow[yKey];
   }
 
-  public loadLine(line: string, y: number) {
+  loadLine(line, y) {
     for (let x = 0; x < line.length; x++) {
-      this.set(x, y, line[x] as T);
+      this.set(x, y, line[x]);
     }
   }
 
-  public loadLines(lines: string[]) {
+  loadLines(lines) {
     for (let y = 0; y < lines.length; y++) {
       this.loadLine(lines[y], y);
     }
   }
 
-  public toString(range?: range): string {
+  toString(range) {
     if (!range) {
       range = this.determineRange();
     }
@@ -53,18 +54,36 @@ export class Grid<T> {
     return output.trimEnd();
   }
 
-  public determineRange(): range {
+   determineRange() {
     return this.range.range();
+  }
+
+  find(token) {
+    for (const xKey in this.items) {
+      const col = this.items[xKey];
+      if (!col) continue;
+      for (const yKey in col) {
+        const item = col[yKey];
+        if (item === token) {
+          return {x: parseInt(xKey), y: parseInt(yKey)}
+        }
+      }
+    }
+  }
+
+  isInRange(x, y) {
+    const r = this.determineRange();
+    return x >= r.minX && x <= r.maxX && y >= r.minY && y <= r.maxY;
   }
 }
 
 class RangeTracker {
-  minX: number | undefined = undefined;
-  minY: number | undefined = undefined;
-  maxX: number | undefined = undefined;
-  maxY: number | undefined = undefined;
+  minX = undefined;
+  minY = undefined;
+  maxX = undefined;
+  maxY = undefined;
 
-  logX(x: number) {
+  logX(x) {
     if (typeof this.minX === "undefined" || x < this.minX) {
       this.minX = x;
     }
@@ -73,7 +92,7 @@ class RangeTracker {
     }
   }
 
-  logY(y: number) {
+  logY(y) {
     if (typeof this.minY === "undefined" || y < this.minY) {
       this.minY = y;
     }
@@ -82,12 +101,12 @@ class RangeTracker {
     }
   }
 
-  log(x: number, y: number) {
+  log(x, y) {
     this.logX(x);
     this.logY(y);
   }
 
-  range(): range {
+  range() {
     return {
       minX: this.minX ?? 0,
       minY: this.minY ?? 0,
@@ -97,6 +116,6 @@ class RangeTracker {
   }
 }
 
-function keyStrings(x: number, y: number): { xKey: string; yKey: string } {
+function keyStrings(x, y) {
   return { xKey: x.toString(), yKey: y.toString() };
 }
